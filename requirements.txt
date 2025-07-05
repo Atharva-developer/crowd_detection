@@ -5,3 +5,4 @@ ultralytics
 numpy
 scikit-learn
 playsound==1.2.2
+gunicorn
