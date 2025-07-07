@@ -1,32 +1,24 @@
-# app.py
-
 import cv2
 import numpy as np
 from ultralytics import YOLO
 from sklearn.cluster import DBSCAN
 import time
 import threading
-from playsound import playsound
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 import os
 
 app = Flask(__name__)
-CORS(app)  # Allow CORS for frontend interaction
+CORS(app)
 
-# Load YOLO model once globally
 model = YOLO("yolov8n.pt")
 
-# Configuration
 PROXIMITY_THRESHOLD = 250
 CROWD_THRESHOLD = 6
 ALERT_INTERVAL = 2
-ALARM_SOUND_PATH = "alert.wav"
-# Global state
 last_sound_time = 0
 crowd_alert_active = False
-
 
 def detect_objects(frame):
     results = model(frame)
@@ -37,16 +29,10 @@ def detect_objects(frame):
             x1, y1, x2, y2, conf, cls = box.tolist()
             if int(cls) == 0:
                 person_bboxes.append((int(x1), int(y1), int(x2), int(y2)))
-
     return person_bboxes
 
-
 def play_alert_sound():
-    try:
-        playsound(ALARM_SOUND_PATH)
-    except Exception as e:
-        print(f"Error playing sound: {e}")
-
+    print("[ALERT] Crowd detected!")
 
 def check_crowding(bboxes):
     global last_sound_time, crowd_alert_active
@@ -60,7 +46,6 @@ def check_crowding(bboxes):
 
     clustering = DBSCAN(eps=adaptive_proximity, min_samples=3, metric='euclidean').fit(centers)
     cluster_labels = clustering.labels_
-
     unique_labels, counts = np.unique(cluster_labels[cluster_labels != -1], return_counts=True)
 
     if any(count >= CROWD_THRESHOLD for count in counts):
@@ -73,7 +58,6 @@ def check_crowding(bboxes):
 
     crowd_alert_active = False
     return False
-
 
 def run_crowd_analysis(video_path, selected_flags):
     cap = cv2.VideoCapture(video_path)
@@ -98,7 +82,6 @@ def run_crowd_analysis(video_path, selected_flags):
     cap.release()
     return "\n".join(detected_frames) if detected_frames else "[INFO] No crowd detected."
 
-
 @app.route('/analyze', methods=['POST'])
 def analyze_video():
     if 'video' not in request.files:
@@ -108,8 +91,6 @@ def analyze_video():
     flags_str = request.form.get('flags', '[]')
     selected_flags = json.loads(flags_str)
 
-    print(f"Analyzing: {video_file.filename} with flags: {selected_flags}")
-
     temp_video_path = f"temp_{time.time()}.mp4"
     video_file.save(temp_video_path)
 
@@ -118,11 +99,10 @@ def analyze_video():
     except Exception as e:
         analysis_log = f"[ERROR] Exception occurred: {str(e)}"
 
-    # Clean up temp file
     os.remove(temp_video_path)
 
     return jsonify({'log': analysis_log})
 
-
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
