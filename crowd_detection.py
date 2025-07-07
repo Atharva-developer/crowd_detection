@@ -12,6 +12,10 @@ import os
 app = Flask(__name__)
 CORS(app)
 
+@app.route('/', methods=['GET'])
+def health_check():
+    return "Python server is online and running!"
+
 model = YOLO("yolov8n.pt")
 
 PROXIMITY_THRESHOLD = 250
@@ -60,7 +64,7 @@ def check_crowding(bboxes):
     return False
 
 def run_crowd_analysis(video_path, selected_flags):
-    cap = cv2.VideoCapture(video_path)
+    cap = cv2.VideoCapture("video1.mp4")
 
     if not cap.isOpened():
         return "[ERROR] Could not open video file."
